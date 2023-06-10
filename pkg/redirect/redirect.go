@@ -45,10 +45,10 @@ func New() http.Handler {
 	router.HandleFunc("/token", token)
 	router.HandleFunc("/v2/{repo}/{rest:.*}", proxy)
 
-	// Redirect any other path to cgr.dev directly.
+	// Redirect any other path to ghcr.io directly.
 	// Among other things this will redirect URLs like https://distroless.dev/static:latest
-	// to https://cgr.dev/chainguard/static:latest, which will redirect to a useful place.
-	// Besides that, any other URL will probably end up serving a 404 from cgr.dev.
+	// to https://ghcr.io/chainguard/static:latest, which will redirect to a useful place.
+	// Besides that, any other URL will probably end up serving a 404 from ghcr.io.
 	router.HandleFunc("/{rest:.*}", ghpage)
 	return router
 }
@@ -57,7 +57,7 @@ func v2(resp http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logging.FromContext(ctx)
 
-	out, _ := http.NewRequest(req.Method, "https://cgr.dev/v2/", nil)
+	out, _ := http.NewRequest(req.Method, "https://ghcr.io/v2/", nil)
 
 	logger.Infow("sending request",
 		"method", out.Method,
@@ -86,14 +86,14 @@ func v2(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	// Ping responses may include a response header to point to where to get a token, that looks like:
-	//   Www-Authenticate: Bearer realm="http://cgr.dev/token",service="cgr.dev"
+	//   Www-Authenticate: Bearer realm="http://ghcr.io/token",service="ghcr.io"
 	//
 	// In order for the client to be able to use this, we need to rewrite it to
 	// point to our token endpoint, not the upstream:
-	//   Www-Authenticate: Bearer realm="http://$HOST/token",service="cgr.dev"
+	//   Www-Authenticate: Bearer realm="http://$HOST/token",service="ghcr.io"
 	wwwAuth := back.Header.Get("Www-Authenticate")
 	if wwwAuth != "" {
-		rewrittenWwwAuth := strings.Replace(wwwAuth, `://cgr.dev/`, fmt.Sprintf(`://%s/`, req.Host), 1)
+		rewrittenWwwAuth := strings.Replace(wwwAuth, `://ghcr.io/`, fmt.Sprintf(`://%s/`, req.Host), 1)
 		resp.Header().Set("Www-Authenticate", rewrittenWwwAuth)
 	}
 
@@ -109,10 +109,10 @@ func token(resp http.ResponseWriter, req *http.Request) {
 
 	vals := req.URL.Query()
 	scope := vals.Get("scope")
-	scope = strings.Replace(scope, "repository:", "repository:chainguard/", 1)
+	scope = strings.Replace(scope, "repository:", "repository:appscode-images/", 1)
 	vals.Set("scope", scope)
 
-	url := "https://cgr.dev/token?" + vals.Encode()
+	url := "https://ghcr.io/token?" + vals.Encode()
 	out, _ := http.NewRequest(req.Method, url, nil)
 	out.Header = req.Header.Clone()
 
@@ -122,7 +122,7 @@ func token(resp http.ResponseWriter, req *http.Request) {
 		"header", redact(out.Header))
 	resp.Header().Set("X-Redirected", out.URL.String())
 
-	back, err := http.DefaultClient.Do(out)
+	back, err := http.DefaultTransport.RoundTrip(out)
 	if err != nil {
 		logger.Errorf("Error sending request: %v", err)
 		http.Error(resp, err.Error(), http.StatusInternalServerError)
@@ -155,7 +155,7 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 	repo := mux.Vars(req)["repo"]
 	rest := mux.Vars(req)["rest"]
 
-	url := fmt.Sprintf("https://cgr.dev/v2/chainguard/%s/%s", repo, rest)
+	url := fmt.Sprintf("https://ghcr.io/v2/appscode-images/%s/%s", repo, rest)
 	if query := req.URL.Query().Encode(); query != "" {
 		url += "?" + query
 	}
@@ -190,14 +190,14 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	// Responses may include a header to point to where to get a token, that looks like:
-	//   Www-Authenticate: Bearer realm="http://cgr.dev/token",service="cgr.dev"
+	//   Www-Authenticate: Bearer realm="http://ghcr.io/token",service="ghcr.io"
 	//
 	// In order for the client to be able to use this, we need to rewrite it to
 	// point to our token endpoint, not the upstream:
-	//   Www-Authenticate: Bearer realm="http://$HOST/token",service="cgr.dev"
+	//   Www-Authenticate: Bearer realm="http://$HOST/token",service="ghcr.io"
 	wwwAuth := back.Header.Get("Www-Authenticate")
 	if wwwAuth != "" {
-		rewrittenWwwAuth := strings.Replace(wwwAuth, `://cgr.dev/`, fmt.Sprintf(`://%s/`, req.Host), 1)
+		rewrittenWwwAuth := strings.Replace(wwwAuth, `://ghcr.io/`, fmt.Sprintf(`://%s/`, req.Host), 1)
 		resp.Header().Set("Www-Authenticate", rewrittenWwwAuth)
 	}
 
@@ -209,7 +209,7 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 	//   Link: </v2/static/repo/tags/list?n=100&last=blah>; rel="next">
 	link := back.Header.Get("Link")
 	if link != "" {
-		rewrittenLink := strings.Replace(link, "/v2/chainguard/", "/v2/", 1)
+		rewrittenLink := strings.Replace(link, "/v2/appscode/", "/v2/", 1)
 		resp.Header().Set("Link", rewrittenLink)
 	}
 
@@ -223,7 +223,7 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 			http.Error(resp, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		lr.Name = strings.TrimPrefix(lr.Name, "chainguard/")
+		lr.Name = strings.TrimPrefix(lr.Name, "appscode-images/")
 
 		// Unset the content-length header from our response, because we're
 		// about to rewrite the response to be shorter than the original.
@@ -256,7 +256,7 @@ func ghpage(resp http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logging.FromContext(ctx)
 
-	url := fmt.Sprintf("https://cgr.dev/chainguard%s", req.URL.Path)
+	url := fmt.Sprintf("https://ghcr.io/appscode-images%s", req.URL.Path)
 	logger.Infof("Redirecting %q to %q", req.URL, url)
 	http.Redirect(resp, req, url, http.StatusTemporaryRedirect)
 }

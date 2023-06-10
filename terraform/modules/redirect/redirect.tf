@@ -11,7 +11,7 @@ resource "google_service_account" "sa" {
 }
 
 resource "ko_image" "redirect" {
-  importpath = "github.com/chainguard-dev/registry-redirect"
+  importpath = "github.com/appscodelabs/registry-redirect"
 }
 
 resource "google_cloud_run_service" "regions" {

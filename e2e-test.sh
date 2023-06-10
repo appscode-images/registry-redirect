@@ -16,10 +16,10 @@ trap 'kill $PID' EXIT
 
 sleep 3  # Server isn't immediately ready.
 
-crane digest localhost:8080/nginx
-crane manifest localhost:8080/nginx
-crane ls localhost:8080/nginx
-crane pull localhost:8080/nginx /dev/null
-crane validate --remote=localhost:8080/nginx
+crane digest localhost:8080/alpine
+crane manifest localhost:8080/alpine
+crane ls localhost:8080/alpine
+crane pull localhost:8080/alpine /dev/null
+crane validate --remote=localhost:8080/alpine
 
 echo PASSED
