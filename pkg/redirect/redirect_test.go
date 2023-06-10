@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chainguard-dev/registry-redirect/pkg/redirect"
+	"github.com/appscodelabs/registry-redirect/pkg/redirect"
 	"github.com/google/go-containerregistry/pkg/crane"
 )
 
@@ -21,7 +21,7 @@ func TestRedirect(t *testing.T) {
 	defer s.Close()
 
 	reg := strings.TrimPrefix(s.URL, "http://")
-	ref := fmt.Sprintf("%s/static", reg)
+	ref := fmt.Sprintf("%s/alpine", reg)
 
 	t.Logf("testing image: %s", ref)
 
@@ -64,7 +64,7 @@ func TestGHPageRedirect(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := got.String(), "https://cgr.dev/chainguard"+path; got != want {
+			if got, want := got.String(), "https://ghcr.io/appscode-images"+path; got != want {
 				t.Fatalf("Got %q, want %q", got, want)
 			}
 		})

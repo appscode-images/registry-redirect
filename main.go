@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/chainguard-dev/registry-redirect/pkg/redirect"
+	"github.com/appscodelabs/registry-redirect/pkg/redirect"
 	"knative.dev/pkg/logging"
 )
 
