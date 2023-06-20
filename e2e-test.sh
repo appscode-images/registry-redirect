@@ -2,8 +2,11 @@
 
 set -euxo pipefail
 
-crane version >/dev/null \
-  || { echo "install crane: https://github.com/google/go-containerregistry/blob/main/cmd/crane"; exit 1; }
+crane version >/dev/null ||
+    {
+        echo "install crane: https://github.com/google/go-containerregistry/blob/main/cmd/crane"
+        exit 1
+    }
 
 # Kill whatever's running on :8080
 # kill -9 $(lsof -ti:8080)
@@ -14,7 +17,7 @@ PID=$!
 echo "server running with pid $PID"
 trap 'kill $PID' EXIT
 
-sleep 3  # Server isn't immediately ready.
+sleep 3 # Server isn't immediately ready.
 
 echo "Testing appscode/alpine"
 
