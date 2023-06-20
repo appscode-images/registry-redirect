@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/appscodelabs/registry-redirect/pkg/redirect"
+
 	"github.com/google/go-containerregistry/pkg/crane"
 )
 

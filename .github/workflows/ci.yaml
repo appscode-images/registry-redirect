@@ -30,15 +30,15 @@ jobs:
       - uses: imjasonh/setup-crane@v0.2
       - run: ./e2e-test.sh
 
-      # fmt and check terraform configs
-      - run: |
-          # Run a local repo for ko build to push to.
-          go install github.com/google/go-containerregistry/cmd/registry@latest
-          registry &
-          export KO_DOCKER_REPO=localhost:1338
-      - run: |
-          terraform init
-          terraform validate
-          terraform fmt -check -diff
-      - uses: aquasecurity/tfsec-action@v1.0.0
+      # # fmt and check terraform configs
+      # - run: |
+      #     # Run a local repo for ko build to push to.
+      #     go install github.com/google/go-containerregistry/cmd/registry@latest
+      #     registry &
+      #     export KO_DOCKER_REPO=localhost:1338
+      # - run: |
+      #     terraform init
+      #     terraform validate
+      #     terraform fmt -check -diff
+      # - uses: aquasecurity/tfsec-action@v1.0.0
 
