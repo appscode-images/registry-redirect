@@ -21,7 +21,7 @@ func TestRedirect(t *testing.T) {
 	defer s.Close()
 
 	reg := strings.TrimPrefix(s.URL, "http://")
-	ref := fmt.Sprintf("%s/alpine", reg)
+	ref := fmt.Sprintf("%s/appscode/alpine", reg)
 
 	t.Logf("testing image: %s", ref)
 
@@ -52,7 +52,7 @@ func TestGHPageRedirect(t *testing.T) {
 		"/busybox@sha256:abcdef",
 	} {
 		t.Run(path, func(t *testing.T) {
-			req, err := http.NewRequest(http.MethodGet, s.URL+path, nil)
+			req, err := http.NewRequest(http.MethodGet, s.URL+"/appscode"+path, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

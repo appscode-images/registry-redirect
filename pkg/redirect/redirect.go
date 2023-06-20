@@ -16,6 +16,11 @@ import (
 	"knative.dev/pkg/logging"
 )
 
+var orgMappings = map[string]string{
+	"appscode": "appscode-images",
+	"kubedb":   "kubedb-images",
+}
+
 func redact(in http.Header) http.Header {
 	h := in.Clone()
 	if h.Get("Authorization") != "" {
@@ -43,7 +48,7 @@ func New() http.Handler {
 	router.HandleFunc("/v2/", v2)
 
 	router.HandleFunc("/token", token)
-	router.HandleFunc("/v2/{repo}/{rest:.*}", proxy)
+	router.HandleFunc("/v2/{org}/{repo}/{rest:.*}", proxy)
 
 	// Redirect any other path to ghcr.io directly.
 	// Among other things this will redirect URLs like https://distroless.dev/static:latest
@@ -109,7 +114,12 @@ func token(resp http.ResponseWriter, req *http.Request) {
 
 	vals := req.URL.Query()
 	scope := vals.Get("scope")
-	scope = strings.Replace(scope, "repository:", "repository:appscode-images/", 1)
+	for orgKey, ghOrg := range orgMappings {
+		if strings.HasPrefix(scope, "repository:"+orgKey+"/") {
+			scope = strings.Replace(scope, "repository:"+orgKey+"/", "repository:"+ghOrg+"/", 1)
+			break
+		}
+	}
 	vals.Set("scope", scope)
 
 	url := "https://ghcr.io/token?" + vals.Encode()
@@ -152,10 +162,11 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logging.FromContext(ctx)
 
+	org := mux.Vars(req)["org"]
 	repo := mux.Vars(req)["repo"]
 	rest := mux.Vars(req)["rest"]
 
-	url := fmt.Sprintf("https://ghcr.io/v2/appscode-images/%s/%s", repo, rest)
+	url := fmt.Sprintf("https://ghcr.io/v2/%s/%s/%s", orgMappings[org], repo, rest)
 	if query := req.URL.Query().Encode(); query != "" {
 		url += "?" + query
 	}
@@ -209,7 +220,13 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 	//   Link: </v2/static/repo/tags/list?n=100&last=blah>; rel="next">
 	link := back.Header.Get("Link")
 	if link != "" {
-		rewrittenLink := strings.Replace(link, "/v2/appscode/", "/v2/", 1)
+		rewrittenLink := link
+		for orgKey, ghOrg := range orgMappings {
+			if strings.HasPrefix(link, "/v2/"+ghOrg+"/") {
+				rewrittenLink = strings.Replace(link, "/v2/"+ghOrg+"/", "/v2/"+orgKey+"/", 1)
+				break
+			}
+		}
 		resp.Header().Set("Link", rewrittenLink)
 	}
 
@@ -223,7 +240,12 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 			http.Error(resp, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		lr.Name = strings.TrimPrefix(lr.Name, "appscode-images/")
+		for _, ghOrg := range orgMappings {
+			if strings.HasPrefix(lr.Name, ghOrg+"/") {
+				lr.Name = strings.TrimPrefix(lr.Name, ghOrg+"/")
+				break
+			}
+		}
 
 		// Unset the content-length header from our response, because we're
 		// about to rewrite the response to be shorter than the original.
@@ -256,7 +278,13 @@ func ghpage(resp http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logging.FromContext(ctx)
 
-	url := fmt.Sprintf("https://ghcr.io/appscode-images%s", req.URL.Path)
+	url := req.URL.String()
+	for orgKey, ghOrg := range orgMappings {
+		if req.URL.Path == "/"+orgKey || strings.HasPrefix(req.URL.Path, "/"+orgKey+"/") {
+			url = fmt.Sprintf("https://ghcr.io%s", strings.Replace(req.URL.Path, "/"+orgKey, "/"+ghOrg, 1))
+			break
+		}
+	}
 	logger.Infof("Redirecting %q to %q", req.URL, url)
 	http.Redirect(resp, req, url, http.StatusTemporaryRedirect)
 }
