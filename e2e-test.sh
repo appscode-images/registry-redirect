@@ -16,10 +16,20 @@ trap 'kill $PID' EXIT
 
 sleep 3  # Server isn't immediately ready.
 
-crane digest localhost:8080/alpine
-crane manifest localhost:8080/alpine
-crane ls localhost:8080/alpine
-crane pull localhost:8080/alpine /dev/null
-crane validate --remote=localhost:8080/alpine
+echo "Testing appscode/alpine"
+
+crane digest localhost:8080/appscode/alpine
+crane manifest localhost:8080/appscode/alpine
+crane ls localhost:8080/appscode/alpine
+crane pull localhost:8080/appscode/alpine /dev/null
+crane validate --remote=localhost:8080/appscode/alpine
+
+echo "Testing kubedb/busybox"
+
+crane digest localhost:8080/kubedb/busybox
+crane manifest localhost:8080/kubedb/busybox
+crane ls localhost:8080/kubedb/busybox
+crane pull localhost:8080/kubedb/busybox /dev/null
+crane validate --remote=localhost:8080/kubedb/busybox
 
 echo PASSED
