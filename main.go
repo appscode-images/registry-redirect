@@ -27,7 +27,7 @@ func main() {
 	logger := logging.FromContext(context.Background())
 
 	if !opts.EnableSSL {
-		http.Handle("/", redirect.New())
+		http.Handle("/", redirect.New(opts))
 
 		logger.Infof("Listening on port %d", opts.Port)
 		logger.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", opts.Port), nil))
@@ -45,7 +45,7 @@ func main() {
 	}
 	server := &http.Server{
 		Addr:         ":https",
-		Handler:      redirect.New(),
+		Handler:      redirect.New(opts),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 		IdleTimeout:  120 * time.Second,

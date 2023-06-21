@@ -18,7 +18,7 @@ import (
 )
 
 func TestRedirect(t *testing.T) {
-	s := httptest.NewServer(redirect.New())
+	s := httptest.NewServer(redirect.New(redirect.NewOptions()))
 	defer s.Close()
 
 	reg := strings.TrimPrefix(s.URL, "http://")
@@ -44,7 +44,7 @@ func TestRedirect(t *testing.T) {
 }
 
 func TestGHPageRedirect(t *testing.T) {
-	s := httptest.NewServer(redirect.New())
+	s := httptest.NewServer(redirect.New(redirect.NewOptions()))
 
 	for _, path := range []string{
 		"/",
@@ -53,7 +53,7 @@ func TestGHPageRedirect(t *testing.T) {
 		"/busybox@sha256:abcdef",
 	} {
 		t.Run(path, func(t *testing.T) {
-			req, err := http.NewRequest(http.MethodGet, s.URL+"/appscode"+path, nil)
+			req, err := http.NewRequest(http.MethodGet, s.URL+"/library"+path, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

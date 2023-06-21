@@ -16,10 +16,7 @@ import (
 	"knative.dev/pkg/logging"
 )
 
-var orgMappings = map[string]string{
-	"appscode": "appscode-images",
-	"kubedb":   "kubedb-images",
-}
+var opts *Options
 
 func redact(in http.Header) http.Header {
 	h := in.Clone()
@@ -29,7 +26,8 @@ func redact(in http.Header) http.Header {
 	return h
 }
 
-func New() http.Handler {
+func New(o *Options) http.Handler {
+	opts = o
 	router := mux.NewRouter()
 
 	router.Use(func(next http.Handler) http.Handler {
@@ -114,7 +112,7 @@ func token(resp http.ResponseWriter, req *http.Request) {
 
 	vals := req.URL.Query()
 	scope := vals.Get("scope")
-	for orgKey, ghOrg := range orgMappings {
+	for orgKey, ghOrg := range opts.OrgMapping {
 		if strings.HasPrefix(scope, "repository:"+orgKey+"/") {
 			scope = strings.Replace(scope, "repository:"+orgKey+"/", "repository:"+ghOrg+"/", 1)
 			break
@@ -166,7 +164,7 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 	repo := mux.Vars(req)["repo"]
 	rest := mux.Vars(req)["rest"]
 
-	url := fmt.Sprintf("https://ghcr.io/v2/%s/%s/%s", orgMappings[org], repo, rest)
+	url := fmt.Sprintf("https://ghcr.io/v2/%s/%s/%s", opts.OrgMapping[org], repo, rest)
 	if query := req.URL.Query().Encode(); query != "" {
 		url += "?" + query
 	}
@@ -221,7 +219,7 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 	link := back.Header.Get("Link")
 	if link != "" {
 		rewrittenLink := link
-		for orgKey, ghOrg := range orgMappings {
+		for orgKey, ghOrg := range opts.OrgMapping {
 			if strings.HasPrefix(link, "/v2/"+ghOrg+"/") {
 				rewrittenLink = strings.Replace(link, "/v2/"+ghOrg+"/", "/v2/"+orgKey+"/", 1)
 				break
@@ -240,7 +238,7 @@ func proxy(resp http.ResponseWriter, req *http.Request) {
 			http.Error(resp, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		for _, ghOrg := range orgMappings {
+		for _, ghOrg := range opts.OrgMapping {
 			if strings.HasPrefix(lr.Name, ghOrg+"/") {
 				lr.Name = strings.TrimPrefix(lr.Name, ghOrg+"/")
 				break
@@ -279,7 +277,7 @@ func ghpage(resp http.ResponseWriter, req *http.Request) {
 	logger := logging.FromContext(ctx)
 
 	url := req.URL.String()
-	for orgKey, ghOrg := range orgMappings {
+	for orgKey, ghOrg := range opts.OrgMapping {
 		if req.URL.Path == "/"+orgKey || strings.HasPrefix(req.URL.Path, "/"+orgKey+"/") {
 			url = fmt.Sprintf("https://ghcr.io%s", strings.Replace(req.URL.Path, "/"+orgKey, "/"+ghOrg, 1))
 			break
